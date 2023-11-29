@@ -1,0 +1,16 @@
+.sidebarStyle {
+    height: 100vh;
+    width: 20%;
+    padding: 2rem;
+    background: #2D2D2D;
+    display: flex;
+    flex-direction: column;
+    gap: 20px
+}
+
+.itemStyles {
+    background-color: #fff;
+    color: #333;
+    border-radius: 4px;
+    padding: 1rem;
+}
