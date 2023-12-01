@@ -1,5 +1,4 @@
 import Head from 'next/head'
-import Image from 'next/image'
 import { Inter } from 'next/font/google'
 import styles from '@/styles/Home.module.css'
 import Canvas from '@/components/Canvas/Canvas';
@@ -7,8 +6,11 @@ import Sidebar from '@/components/Sidebar/Sidebar';
 import Label from '@/components/Label/Label';
 import Button from '@/components/Button/Button';
 import Input from '@/components/Input/Input';
-import { useState } from 'react';
+import { useState, DragEvent, useRef, useEffect } from 'react';
 import Modal from '@/components/Modal/Modal';
+import { useDrag } from 'react-dnd';
+import {CanvasElement} from '@/utils/Types'
+import DraggableElement from '@/components/GeneratedElement/generatedElement';
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -18,9 +20,20 @@ export default function Home() {
   const [showModal, setShowModal] = useState(false);
   const [coordinates, setCoordinates] = useState({ x: 0, y: 0 });
 
+  const [elements, setElements] = useState<CanvasElement[]>([]);
+  const canvasRef = useRef<HTMLDivElement>(null);
+
+  const [selectedElement, setSelectedElement] = useState<string | null>(null);
+
   const handleChange = () => {
     console.log(inputVal);
   }
+
+  const sidebarItems = [
+    { id: 'label', displayName: 'Label', component: <Label text='This is a label' /> },
+    { id: 'input', displayName: 'Input', component: <Button text='Button' /> },
+    { id: 'button', displayName: 'Button', component: <Input value={inputVal} onChange={handleChange} /> },
+  ]
 
   const handleDrop = (x: number, y: number) => {
     setCoordinates({ x, y });
@@ -28,13 +41,39 @@ export default function Home() {
   };
 
   const closeModal = () => setShowModal(false);
+  
+  const handleFormSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const newElement: CanvasElement = {
+      id: crypto.randomUUID(), // or another method to generate a unique ID
+      text: formData.get('text') as string,
+      x: parseInt(formData.get('x') as string),
+      y: parseInt(formData.get('y') as string),
+      fontSize: formData.get('fontSize') as string,
+      fontWeight: formData.get('fontWeight') as string,
+    };
 
-  const sidebarItems = [
-    { id: 'label', displayName: 'Label', component: <Label text='This is a label' /> },
-    { id: 'input', displayName: 'Input', component: <Button text='Button' /> },
-    { id: 'button', displayName: 'Button', component : <Input value={inputVal} onChange={handleChange} /> },
-  ]
-
+    setElements([...elements, newElement]);
+    setShowModal(false);
+  };
+  
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!event.target) return;
+  
+      // Check if the clicked area is not your element
+      if (!(event.target as HTMLElement).closest('.element')) {
+        setSelectedElement(null);
+      }
+    };
+  
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+  
   return (
     <>
       <Head>
@@ -44,23 +83,45 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <main className={`${styles.main} ${inter.className}`}>
-        <Canvas onDrop={handleDrop} />
+        <Canvas ref={canvasRef} onDrop={handleDrop} />
         <Sidebar items={sidebarItems} />
         {showModal && (
-        <Modal isOpen={showModal} onClose={closeModal}>
-          <form>
-            <label>
-              X Coordinate:
-              <input type="number" value={coordinates.x} readOnly />
-            </label>
-            <label>
-              Y Coordinate:
-              <input type="number" value={coordinates.y} readOnly />
-            </label>
-            <button type="submit">Save</button>
-          </form>
-        </Modal>
-      )}
+          <Modal isOpen={showModal} onClose={closeModal}>
+            <form onSubmit={handleFormSubmit} className={styles.modalForm}>
+              <label>
+                Text:
+                <input type="text" name="text" defaultValue="This is a label" />
+              </label>
+              <label>
+                X Coordinate:
+                <input type="number" name="x" defaultValue={coordinates.x} readOnly />
+              </label>
+              <label>
+                Y Coordinate:
+                <input type="number" name="y" defaultValue={coordinates.y} readOnly />
+              </label>
+              <label>
+                Font Size:
+                <input type="number" name="fontSize" defaultValue="16" />
+              </label>
+              <label>
+                Font Weight:
+                <input type="number" name="fontWeight" defaultValue="400" />
+              </label>
+              <button type="submit">Save Changes</button>
+            </form>
+          </Modal>
+        )}
+        <div>
+          {elements.map((element) => (
+            <DraggableElement
+            key={element.id}
+            element={element}
+            selectedElement={selectedElement}
+            setSelectedElement={setSelectedElement}
+          />
+          ))}
+        </div>
       </main>
     </>
   )

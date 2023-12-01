@@ -3,3 +3,8 @@
   width: 100%;
   display: flex;
 }
+
+.modalForm {
+  display: flex;
+  flex-direction: column;
+}

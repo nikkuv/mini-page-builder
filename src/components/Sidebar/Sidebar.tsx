@@ -19,7 +19,7 @@ const DraggableSidebarItem: React.FC<SidebarItemProps> = ({ id, displayName }) =
   return (
     <div
       ref={drag}
-      className={`${styles.itemStyle} ${isDragging ? styles.dragging : ''}`}
+      className={`${styles.itemStyles} ${isDragging ? styles.dragging : ''}`}
       style={{ opacity: isDragging ? 0.5 : 1 }}
     >
       {displayName}

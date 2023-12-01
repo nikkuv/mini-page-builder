@@ -1,24 +1,41 @@
-
 import { useDrop } from 'react-dnd';
+import { forwardRef, useImperativeHandle, useRef } from 'react';
 import styles from '@/styles/Canvas.module.css';
 
 type CanvasProps = {
   onDrop: (x: number, y: number) => void;
 };
 
-const CanvasComponent: React.FC<CanvasProps> = ({ onDrop }) => {
+interface ExtendedDiv extends HTMLDivElement {
+    getBoundingClientRect: () => DOMRect;
+}
+
+const CanvasComponent = forwardRef<HTMLDivElement, CanvasProps>(({ onDrop }, ref) => {
+  const internalRef = useRef<HTMLDivElement>(null);
+  
+  useImperativeHandle(ref, () => ({
+    getBoundingClientRect: () => {
+      // Check if internalRef.current is not null before calling getBoundingClientRect
+      return internalRef.current ? internalRef.current.getBoundingClientRect() : new DOMRect();
+    },
+  }) as ExtendedDiv);
+
   const [, drop] = useDrop({
-    accept: 'YOUR_COMPONENT_TYPE',
+    accept: 'COMPONENT',
     drop: (item, monitor) => {
       const clientOffset = monitor.getClientOffset();
-      if (clientOffset) {
-        onDrop(clientOffset.x, clientOffset.y);
+      if (clientOffset && internalRef.current) {
+        const rect = internalRef.current.getBoundingClientRect();
+        const x = clientOffset.x - rect.left;
+        const y = clientOffset.y - rect.top;
+        onDrop(x, y);
       }
     },
   });
 
-  return <div ref={drop} className={styles.canvasStyle}></div>;
-};
+  drop(internalRef);
+
+  return <div ref={internalRef} className={styles.canvasStyle}></div>;
+});
 
 export default CanvasComponent;
-
